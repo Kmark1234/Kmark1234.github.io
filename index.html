@@ -3,175 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cisco Segédlet - Lapozó</title>
+    <title>Cisco Segédlet - Kereshető</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf_viewer.min.css">
     <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: #2c3e50; 
-            color: white; 
-            margin: 0; 
-            padding: 0; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            overflow: hidden; 
-        }
-
-        /* Felső cím */
-        h2 { text-align: center; margin: 10px 0; font-size: 20px; }
-
-        /* PDF terület - görgethető, ha nagy a kép */
+        body { font-family: sans-serif; background: #2c3e50; color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
         #pdf-viewer { 
             flex: 1; 
             overflow: auto; 
             display: flex; 
             justify-content: center; 
-            align-items: flex-start;
             background: #34495e;
-            padding-bottom: 80px; /* Helyet hagyunk az alsó sávnak */
+            padding: 20px 0 80px 0;
         }
 
-        canvas { 
-            box-shadow: 0 0 30px rgba(0,0,0,0.5); 
+        /* Fontos a szövegréteg pozicionálásához */
+        .page-container {
+            position: relative;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
             background: white;
-            max-width: 100%;
-            height: auto;
+            margin-bottom: 20px;
         }
 
-        /* ALSÓ KÉK SÁV */
+        .textLayer {
+            opacity: 0.2; /* Ettől lesz kijelölhető/kereshető a szöveg */
+        }
+
         #controls { 
-            position: fixed; 
-            bottom: 0; 
-            left: 0; 
-            right: 0; 
-            background: #2980b9; /* Kék szín */
-            padding: 15px 30px; 
-            display: flex; 
-            justify-content: space-between; /* Ez rakja a szélére a gombokat */
-            align-items: center; 
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.3);
-            z-index: 1000;
+            position: fixed; bottom: 0; width: 100%; background: #2980b9; 
+            padding: 15px 0; display: flex; justify-content: space-around; align-items: center; 
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.3); z-index: 1000;
         }
 
-        button { 
-            padding: 12px 25px; 
-            cursor: pointer; 
-            font-size: 16px; 
-            font-weight: bold;
-            border: none; 
-            border-radius: 8px; 
-            background: white; 
-            color: #2980b9; 
-            transition: 0.3s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-
-        button:hover { background: #ecf0f1; transform: scale(1.05); }
-        button:disabled { background: #bdc3c7; color: #7f8c8d; cursor: not-allowed; transform: none; }
-
-        .page-info { 
-            font-weight: bold; 
-            font-size: 18px; 
-            background: rgba(255,255,255,0.2);
-            padding: 5px 15px;
-            border-radius: 20px;
-        }
-
-        #loading-msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-style: italic; }
+        button { padding: 12px 25px; cursor: pointer; font-weight: bold; border: none; border-radius: 8px; background: white; color: #2980b9; }
+        button:disabled { background: #bdc3c7; }
+        .page-info { font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <h2 id="title">Cisco eszközök beállításai</h2>
-
-    <div id="loading-msg">PDF betöltése...</div>
-
     <div id="pdf-viewer">
-        <canvas id="pdf-canvas"></canvas>
+        <div id="container" class="page-container">
+            <canvas id="pdf-canvas"></canvas>
+            <div id="text-layer" class="textLayer"></div>
+        </div>
     </div>
 
     <div id="controls">
-        <button id="prev"> < Előző </button>
-        
+        <button id="prev"> << Előző </button>
         <div class="page-info">
             <span id="page-num">0</span> / <span id="page-count">0</span>
+            <br><small>(Keresés: Ctrl + F)</small>
         </div>
-        
-        <button id="next"> Következő > </button>
+        <button id="next"> Következő >> </button>
     </div>
 
     <script>
+        const url = 'Cisco_eszkozok_beallitasai.pdf';
         const pdfjsLib = window['pdfjs-dist/build/pdf'];
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        // A fájl neve (ügyelj a pontos egyezésre!)
-        const url = 'Cisco_eszkozok_beallitasai.pdf'; 
-
-        let pdfDoc = null,
-            pageNum = 1,
-            canvas = document.getElementById('pdf-canvas'),
-            ctx = canvas.getContext('2d'),
-            pageIsRendering = false,
-            pageNumPending = null;
+        let pdfDoc = null, pageNum = 1, pageIsRendering = false;
 
         pdfjsLib.getDocument(url).promise.then(pdf => {
             pdfDoc = pdf;
             document.getElementById('page-count').textContent = pdf.numPages;
-            document.getElementById('loading-msg').style.display = 'none';
             renderPage(pageNum);
-        }).catch(err => {
-            document.getElementById('loading-msg').textContent = "Hiba: A PDF nem található! (Fájlnév: " + url + ")";
         });
 
         function renderPage(num) {
             pageIsRendering = true;
             pdfDoc.getPage(num).then(page => {
-                // A scale állításával tudod növelni/csökkenteni a méretet
                 const viewport = page.getViewport({ scale: 1.5 });
+                const canvas = document.getElementById('pdf-canvas');
+                const ctx = canvas.getContext('2d');
+                
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
 
-                const renderContext = {
-                    canvasContext: ctx,
-                    viewport: viewport
-                };
+                // Szövegréteg méretezése
+                const textLayerDiv = document.getElementById('text-layer');
+                textLayerDiv.innerHTML = '';
+                textLayerDiv.style.width = canvas.width + 'px';
+                textLayerDiv.style.height = canvas.height + 'px';
+                textLayerDiv.style.top = '0';
+                textLayerDiv.style.left = '0';
+                textLayerDiv.style.position = 'absolute';
 
-                page.render(renderContext).promise.then(() => {
+                // 1. Megrajzoljuk a képet (Canvas)
+                const renderTask = page.render({ canvasContext: ctx, viewport: viewport });
+                
+                renderTask.promise.then(() => {
                     pageIsRendering = false;
-                    if (pageNumPending !== null) {
-                        renderPage(pageNumPending);
-                        pageNumPending = null;
-                    }
+                    // 2. Legyártjuk a szövegréteget a kereséshez
+                    return page.getTextContent();
+                }).then(textContent => {
+                    pdfjsLib.renderTextLayer({
+                        textContent: textContent,
+                        container: textLayerDiv,
+                        viewport: viewport,
+                        textDivs: []
+                    });
                 });
 
                 document.getElementById('page-num').textContent = num;
-                
-                // Gombok tiltása ha az elején/végén vagyunk
                 document.getElementById('prev').disabled = (num <= 1);
                 document.getElementById('next').disabled = (num >= pdfDoc.numPages);
             });
         }
 
-        function queueRenderPage(num) {
-            if (pageIsRendering) {
-                pageNumPending = num;
-            } else {
-                renderPage(num);
-            }
-        }
-
-        document.getElementById('prev').onclick = () => {
-            if (pageNum <= 1) return;
-            pageNum--;
-            queueRenderPage(pageNum);
-        };
-
-        document.getElementById('next').onclick = () => {
-            if (pageNum >= pdfDoc.numPages) return;
-            pageNum++;
-            queueRenderPage(pageNum);
-        };
+        document.getElementById('prev').onclick = () => { if (pageNum <= 1 || pageIsRendering) return; pageNum--; renderPage(pageNum); };
+        document.getElementById('next').onclick = () => { if (pageNum >= pdfDoc.numPages || pageIsRendering) return; pageNum++; renderPage(pageNum); };
     </script>
 </body>
 </html>
