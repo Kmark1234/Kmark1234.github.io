@@ -4,117 +4,79 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cisco Segédlet - Kereshető</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf_viewer.min.css">
     <style>
-        body { font-family: sans-serif; background: #2c3e50; color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        
-        #pdf-viewer { 
-            flex: 1; 
-            overflow: auto; 
+        body { 
+            font-family: sans-serif; 
+            background: #2c3e50; 
+            margin: 0; 
+            padding: 0; 
             display: flex; 
-            justify-content: center; 
+            flex-direction: column; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
+
+        /* A PDF megjelenítője */
+        #pdf-container {
+            flex: 1;
+            width: 100%;
+            height: calc(100vh - 70px);
             background: #34495e;
-            padding: 20px 0 80px 0;
         }
 
-        /* Fontos a szövegréteg pozicionálásához */
-        .page-container {
-            position: relative;
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
-            background: white;
-            margin-bottom: 20px;
+        /* Az objektum ami betölti a PDF-et */
+        object {
+            width: 100%;
+            height: 100%;
         }
 
-        .textLayer {
-            opacity: 0.2; /* Ettől lesz kijelölhető/kereshető a szöveg */
+        /* ALSÓ KÉK SÁV */
+        #footer { 
+            height: 70px;
+            background: #2980b9; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 0 40px;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.3);
+            z-index: 100;
         }
 
-        #controls { 
-            position: fixed; bottom: 0; width: 100%; background: #2980b9; 
-            padding: 15px 0; display: flex; justify-content: space-around; align-items: center; 
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.3); z-index: 1000;
+        .btn { 
+            padding: 10px 20px; 
+            font-weight: bold; 
+            border: none; 
+            border-radius: 5px; 
+            background: white; 
+            color: #2980b9; 
+            text-decoration: none;
+            font-size: 14px;
         }
 
-        button { padding: 12px 25px; cursor: pointer; font-weight: bold; border: none; border-radius: 8px; background: white; color: #2980b9; }
-        button:disabled { background: #bdc3c7; }
-        .page-info { font-weight: bold; }
+        .title-text {
+            font-weight: bold;
+            font-size: 16px;
+            color: white;
+        }
     </style>
 </head>
 <body>
 
-    <div id="pdf-viewer">
-        <div id="container" class="page-container">
-            <canvas id="pdf-canvas"></canvas>
-            <div id="text-layer" class="textLayer"></div>
+    <div id="pdf-container">
+        <object data="Cisco_eszkozok_beallitasai.pdf#toolbar=1&navpanes=0" type="application/pdf">
+            <p>Úgy tűnik, a böngésződ nem támogatja a PDF megjelenítést. 
+            <a href="Cisco_eszkozok_beallitasai.pdf">Kattints ide a letöltéshez!</a></p>
+        </object>
+    </div>
+
+    <div id="footer">
+        <div class="title-text">Cisco eszközök beállításai</div>
+        
+        <div style="display: flex; gap: 10px;">
+            <span style="color: white; font-size: 14px; margin-right: 10px;">Használd a PDF belső gombjait a lapozáshoz és kereséshez!</span>
+            <a href="#" onclick="location.reload();" class="btn">Vissza az elejére</a>
         </div>
     </div>
 
-    <div id="controls">
-        <button id="prev"> << Előző </button>
-        <div class="page-info">
-            <span id="page-num">0</span> / <span id="page-count">0</span>
-            <br><small>(Keresés: Ctrl + F)</small>
-        </div>
-        <button id="next"> Következő >> </button>
-    </div>
-
-    <script>
-        const url = 'Cisco_eszkozok_beallitasai.pdf';
-        const pdfjsLib = window['pdfjs-dist/build/pdf'];
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-
-        let pdfDoc = null, pageNum = 1, pageIsRendering = false;
-
-        pdfjsLib.getDocument(url).promise.then(pdf => {
-            pdfDoc = pdf;
-            document.getElementById('page-count').textContent = pdf.numPages;
-            renderPage(pageNum);
-        });
-
-        function renderPage(num) {
-            pageIsRendering = true;
-            pdfDoc.getPage(num).then(page => {
-                const viewport = page.getViewport({ scale: 1.5 });
-                const canvas = document.getElementById('pdf-canvas');
-                const ctx = canvas.getContext('2d');
-                
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                // Szövegréteg méretezése
-                const textLayerDiv = document.getElementById('text-layer');
-                textLayerDiv.innerHTML = '';
-                textLayerDiv.style.width = canvas.width + 'px';
-                textLayerDiv.style.height = canvas.height + 'px';
-                textLayerDiv.style.top = '0';
-                textLayerDiv.style.left = '0';
-                textLayerDiv.style.position = 'absolute';
-
-                // 1. Megrajzoljuk a képet (Canvas)
-                const renderTask = page.render({ canvasContext: ctx, viewport: viewport });
-                
-                renderTask.promise.then(() => {
-                    pageIsRendering = false;
-                    // 2. Legyártjuk a szövegréteget a kereséshez
-                    return page.getTextContent();
-                }).then(textContent => {
-                    pdfjsLib.renderTextLayer({
-                        textContent: textContent,
-                        container: textLayerDiv,
-                        viewport: viewport,
-                        textDivs: []
-                    });
-                });
-
-                document.getElementById('page-num').textContent = num;
-                document.getElementById('prev').disabled = (num <= 1);
-                document.getElementById('next').disabled = (num >= pdfDoc.numPages);
-            });
-        }
-
-        document.getElementById('prev').onclick = () => { if (pageNum <= 1 || pageIsRendering) return; pageNum--; renderPage(pageNum); };
-        document.getElementById('next').onclick = () => { if (pageNum >= pdfDoc.numPages || pageIsRendering) return; pageNum++; renderPage(pageNum); };
-    </script>
 </body>
 </html>
