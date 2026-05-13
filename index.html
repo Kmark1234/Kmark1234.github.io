@@ -5,76 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cisco Segédlet - Kereshető</title>
     <style>
-        body { 
-            font-family: sans-serif; 
-            background: #2c3e50; 
-            margin: 0; 
-            padding: 0; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            overflow: hidden; 
-        }
-
-        /* A PDF megjelenítője */
-        #pdf-container {
-            flex: 1;
-            width: 100%;
-            height: calc(100vh - 70px);
-            background: #34495e;
-        }
-
-        /* Az objektum ami betölti a PDF-et */
-        object {
-            width: 100%;
+        body, html {
+            margin: 0;
+            padding: 0;
             height: 100%;
+            overflow: hidden; /* Megakadályozza a dupla görgetősávot */
+            background-color: #2c3e50;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* A PDF területe */
+        #pdf-viewer {
+            flex: 1; /* Kitölti a maradék helyet */
+            width: 100%;
+            border: none;
         }
 
         /* ALSÓ KÉK SÁV */
-        #footer { 
-            height: 70px;
-            background: #2980b9; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            padding: 0 40px;
-            box-shadow: 0 -4px 10px rgba(0,0,0,0.3);
+        #footer-controls {
+            height: 60px;
+            background-color: #2980b9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            box-shadow: 0 -3px 10px rgba(0,0,0,0.3);
             z-index: 100;
+            color: white;
+            font-family: sans-serif;
         }
 
-        .btn { 
-            padding: 10px 20px; 
-            font-weight: bold; 
-            border: none; 
-            border-radius: 5px; 
-            background: white; 
-            color: #2980b9; 
-            text-decoration: none;
+        .info-text {
+            font-weight: bold;
             font-size: 14px;
         }
 
-        .title-text {
+        .btn-refresh {
+            padding: 8px 15px;
+            background: white;
+            color: #2980b9;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
             font-weight: bold;
-            font-size: 16px;
-            color: white;
+            text-decoration: none;
         }
     </style>
 </head>
 <body>
 
-    <div id="pdf-container">
-        <object data="Cisco_eszkozok_beallitasai.pdf#toolbar=1&navpanes=0" type="application/pdf">
-            <p>Úgy tűnik, a böngésződ nem támogatja a PDF megjelenítést. 
-            <a href="Cisco_eszkozok_beallitasai.pdf">Kattints ide a letöltéshez!</a></p>
-        </object>
-    </div>
+    <iframe 
+        id="pdf-viewer" 
+        src="Cisco_eszkozok_beallitasai.pdf#toolbar=1&navpanes=1" 
+        type="application/pdf">
+    </iframe>
 
-    <div id="footer">
-        <div class="title-text">Cisco eszközök beállításai</div>
+    <div id="footer-controls">
+        <div class="info-text">CISCO ESZKÖZÖK BEÁLLÍTÁSAI</div>
         
-        <div style="display: flex; gap: 10px;">
-            <span style="color: white; font-size: 14px; margin-right: 10px;">Használd a PDF belső gombjait a lapozáshoz és kereséshez!</span>
-            <a href="#" onclick="location.reload();" class="btn">Vissza az elejére</a>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span style="font-size: 12px; opacity: 0.9;">Tipp: Kereséshez nyomj <b>Ctrl + F</b>-et!</span>
+            <a href="Cisco_eszkozok_beallitasai.pdf" download class="btn-refresh">Letöltés</a>
         </div>
     </div>
 
